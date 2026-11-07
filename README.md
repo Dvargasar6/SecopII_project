@@ -307,6 +307,36 @@ psql -h localhost -U secop_app -d secop -c 'SELECT current_user, current_databas
 
 Expected result: one row with `secop_app | secop | PostgreSQL 18.x ...`.
 
+### 1b. Optional: store the project database on another disk
+
+The scope (about 3.4 million contracts) needs roughly 10–15 GB once staging, the model and indexes are built. If the partition that holds the PostgreSQL data folder is short on space, move only the `secop` database to a tablespace on a larger disk. The disk must use a Linux filesystem (ext4, xfs, btrfs) and be mounted at boot. The role, its password and the connection settings do not change.
+
+Run this before loading any data. `ALTER DATABASE ... SET TABLESPACE` requires that nobody is connected to `secop`. Replace the path with a folder on your disk; it should be outside the repository.
+
+```bash
+# Folder owned by the server user; postgres must be able to traverse every parent folder
+sudo install -d -o postgres -g postgres -m 700 /mnt/aux/home/pgdata/secop_ts
+
+# Make the PostgreSQL service wait for that disk at boot
+sudo mkdir -p /etc/systemd/system/postgresql.service.d
+printf '[Unit]\nRequiresMountsFor=/mnt/aux/home/pgdata/secop_ts\n' | sudo tee /etc/systemd/system/postgresql.service.d/mnt-aux.conf
+sudo systemctl daemon-reload
+
+# Create the tablespace and make it the default location of secop
+sudo -iu postgres psql -v ON_ERROR_STOP=1 <<'SQL'
+CREATE TABLESPACE secop_ts LOCATION '/mnt/aux/home/pgdata/secop_ts';
+ALTER DATABASE secop SET TABLESPACE secop_ts;
+SQL
+```
+
+Check:
+
+```bash
+sudo -iu postgres psql -c "SELECT d.datname, t.spcname, pg_tablespace_location(t.oid) FROM pg_database d JOIN pg_tablespace t ON t.oid = d.dattablespace WHERE d.datname = 'secop';"
+```
+
+Expected result: `secop | secop_ts | <your path>`. To undo it, as `postgres` and with nobody connected to `secop`, run `ALTER DATABASE secop SET TABLESPACE pg_default;` and then `DROP TABLESPACE secop_ts;`.
+
 ### 2. Python environment and configuration
 
 Clone the repository, create the Conda environment (Python 3.14 plus the pinned packages in `requirements.txt`) and activate it:
@@ -420,6 +450,7 @@ Rule: no row is discarded without recording the count and the reason.
 | 2026-10-23 | Pagination ordered by `:id` with one Parquet file per page | Stable pages and resumable extraction |
 | 2026-11-06 | Repository named `SecopII_project` | Same name for the local folder and the remote repository |
 | 2026-11-06 | Conda environment instead of `venv` | One reproducible environment (`environment.yml`) that pins the Python version independently of the system Python; Python packages still come from `requirements.txt` via pip |
+| 2026-11-07 | Database `secop` stored in tablespace `secop_ts` on a secondary disk, instead of moving or symlinking the whole PostgreSQL data folder | Only the project data moves. PostgreSQL records the location and can verify it with SQL, it is reversible with one command, and the system package's folders stay untouched |
 | 2026-11-07 | Scope: whole country, contracts signed 2022–2025 (3,442,281 rows) instead of Antioquia only | Allows comparing departments and a map of Colombia in the report. The four years are complete; 2026 is still in progress, and the earlier years have few contracts |
 
 **Scaling to 100× the volume:** *pending.*
