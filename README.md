@@ -20,7 +20,7 @@ An end-to-end ELT pipeline that extracts Colombian public contracts from the SEC
 
 | Stage | Status | Notes |
 |---|---|---|
-| Environment and exploration | In progress | Repository structure created |
+| Environment and exploration | In progress | PostgreSQL database and Python environment ready |
 | Extraction | Pending | |
 | Staging | Pending | |
 | Transformation | Pending | |
@@ -210,7 +210,7 @@ erDiagram
 The files are currently empty placeholders and will be implemented stage by stage.
 
 ```
-secop-analytics/
+SecopII_project/
 ├── README.md                          <- this file
 ├── .gitignore                         <- excludes .env, data/, export/
 ├── .env.example                       <- environment variable template, no real values
@@ -249,7 +249,7 @@ secop-analytics/
 
 | Requirement | Version | Notes |
 |---|---|---|
-| Conda (Miniforge recommended) | any | Creates the project environment from `environment.yml` |
+| Conda (Miniforge or Miniconda) | any | Creates the project environment from `environment.yml`; packages come only from conda-forge |
 | Python | 3.14 | Installed by Conda inside the `secop` environment |
 | PostgreSQL | 18 | Server and `psql` client |
 | `make` | any | Optional; every target can also be run manually |
@@ -270,7 +270,65 @@ secop-analytics/
 
 <br>
 
-*Pending.* Exact, copyable commands with expected results will be added as each stage is implemented. Final checks (row counts and key figures) will be listed at the end of this section.
+Exact, copyable commands with expected results, added as each stage is implemented. Final checks (row counts and key figures) will be listed at the end of this section.
+
+### 1. Database
+
+Creates an application role without superuser rights and a database it owns, with an explicit locale so the result is the same on any machine. Run as the `postgres` operating-system user:
+
+```bash
+sudo -iu postgres psql -v ON_ERROR_STOP=1 <<'SQL'
+CREATE ROLE secop_app LOGIN;
+CREATE DATABASE secop
+  OWNER secop_app
+  TEMPLATE template0
+  ENCODING 'UTF8'
+  LOCALE_PROVIDER builtin
+  LOCALE 'C.UTF-8';
+SQL
+sudo -iu postgres psql -c '\password secop_app'
+```
+
+The project connects over TCP (`localhost`) with password authentication. Check that the `host` lines of `pg_hba.conf` use `scram-sha-256`:
+
+```bash
+sudo -iu postgres grep -Ev '^\s*(#|$)' /var/lib/postgres/data/pg_hba.conf
+```
+
+Test the connection (it asks for the password set above):
+
+```bash
+psql -h localhost -U secop_app -d secop -c 'SELECT current_user, current_database(), version();'
+```
+
+Expected result: one row with `secop_app | secop | PostgreSQL 18.x ...`.
+
+### 2. Python environment and configuration
+
+Clone the repository, create the Conda environment (Python 3.14 plus the pinned packages in `requirements.txt`) and activate it:
+
+```bash
+git clone https://github.com/Dvargasar6/SecopII_project.git
+cd SecopII_project
+conda env create -f environment.yml
+conda activate secop
+```
+
+Check that the main packages import:
+
+```bash
+python -c "import psycopg, sodapy, pandas, pyarrow, sqlalchemy, dotenv; print('ok')"
+```
+
+Create your local configuration from the template and fill in `SOCRATA_APP_TOKEN` and `PGPASSWORD` (the `secop_app` password from step 1):
+
+```bash
+cp .env.example .env
+```
+
+`.env` is gitignored. The PostgreSQL variables use the standard libpq names (`PGHOST`, `PGUSER`, ...), so `psql` can also use them directly.
+
+*The remaining steps are pending and will be added as each stage is implemented.*
 
 </details>
 
@@ -356,6 +414,7 @@ Rule: no row is discarded without recording the count and the reason.
 | 2026-10-23 | ELT with a `TEXT` staging layer | Loading never fails on content; all cleaning is traceable in SQL |
 | 2026-10-23 | Star schema with surrogate keys and unknown member `-1` | Fast joins, `NOT NULL` foreign keys, no contract lost to missing context |
 | 2026-10-23 | Pagination ordered by `:id` with one Parquet file per page | Stable pages and resumable extraction |
+| 2026-11-06 | Repository named `SecopII_project` | Same name for the local folder and the remote repository |
 | 2026-11-06 | Conda environment instead of `venv` | One reproducible environment (`environment.yml`) that pins the Python version independently of the system Python; Python packages still come from `requirements.txt` via pip |
 
 **Scaling to 100× the volume:** *pending.*

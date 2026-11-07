@@ -1,0 +1,21 @@
+# Python dependencies, pinned to exact versions for reproducibility.
+# Installed by environment.yml; can also be used directly: pip install -r requirements.txt
+
+# --- Extraction (SODA API) ---
+sodapy==2.2.0
+requests==2.34.2
+
+# --- PostgreSQL access ---
+psycopg[binary]==3.3.8        # driver; COPY for bulk loading into staging
+SQLAlchemy==2.1.8             # engine for pd.read_sql in notebooks
+
+# --- Storage and exploration ---
+pyarrow==26.0.1               # Parquet files, one per extracted page
+pandas==3.1.1                 # exploration and verification only, never transformation
+
+# --- Configuration ---
+python-dotenv==1.2.4          # reads .env
+
+# --- Notebooks ---
+jupyterlab==4.6.6
+ipykernel==7.4.0

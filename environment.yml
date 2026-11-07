@@ -1,0 +1,16 @@
+# Conda environment for the project.
+# Conda pins the Python version; Python packages come from requirements.txt via pip.
+#
+#   conda env create -f environment.yml
+#   conda activate secop
+#
+# To apply later changes:  conda env update -f environment.yml --prune
+name: secop
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.14
+  - pip
+  - pip:
+      - -r requirements.txt
