@@ -1,0 +1,47 @@
+# --- Secrets ---------------------------------------------------------------
+# Real credentials (App Token, database passwords). Only .env.example is versioned.
+.env
+.env.*
+!.env.example
+
+# --- Generated data --------------------------------------------------------
+# Parquet extractions and Power BI exports are produced at run time.
+data/
+export/
+
+# --- Agent / process documents (local only, never pushed) ------------------
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+docs/CLAUDE.md
+docs/context.md
+
+# --- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Environments ----------------------------------------------------------
+# The project uses a named Conda environment (secop); ignore any local env dirs.
+.venv/
+venv/
+env/
+.conda/
+
+# --- Jupyter ---------------------------------------------------------------
+.ipynb_checkpoints/
+
+# --- Logs ------------------------------------------------------------------
+*.log
+logs/
+
+# --- Editors and OS --------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
