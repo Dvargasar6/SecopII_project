@@ -20,7 +20,7 @@ An end-to-end ELT pipeline that extracts Colombian public contracts from the SEC
 
 | Stage | Status | Notes |
 |---|---|---|
-| Environment and exploration | In progress | PostgreSQL database and Python environment ready |
+| Environment and exploration | In progress | Database and Python environment ready; API sample explored (`notebooks/01_exploracion.ipynb`) |
 | Extraction | Pending | |
 | Staging | Pending | |
 | Transformation | Pending | |
@@ -28,10 +28,13 @@ An end-to-end ELT pipeline that extracts Colombian public contracts from the SEC
 | Analysis | Pending | |
 | Power BI report | Pending | |
 
-- **Extracted scope:** proposed Antioquia, contracts signed 2022–2025; to be confirmed with a SoQL row count.
-- **Last update:** 2026-11-06
-- **Known limitations:** none recorded yet.
-- **Source size (2026-11-06):** dataset `jbjy-vk9h` has 5,687,362 rows and 87 fields (whole country, all years).
+- **Extracted scope:** whole country, contracts signed 2022–2025: 3,442,281 rows by SoQL count (2026-11-07), 254 of which are duplicate copies of another contract.
+- **Last update:** 2026-11-07
+- **Known limitations:**
+  - The source has no DANE code column. The DANE department codes for the map will come from a DIVIPOLA reference table, joined by department name.
+  - The `departamento` field appears to be the location of the contracting entity, not where the work is done.
+  - 67,103 contracts have no signature date, so they fall outside the date-based scope.
+- **Source size (2026-11-07):** dataset `jbjy-vk9h` has 5,687,362 rows and 95 columns in its metadata (whole country, all years). The API leaves null fields out of each row, so individual rows show fewer fields.
 
 </details>
 
@@ -355,10 +358,10 @@ Rule: no row is discarded without recording the count and the reason.
 
 | Stage | Rows in | Rows out | Discarded | Reason |
 |---|---|---|---|---|
-| Source (API count for the scope) | — | pending | — | — |
+| Source (API count for the scope) | 5,687,362 (whole dataset) | 3,442,281 (signed 2022–2025) | 2,245,081 | 1,225,314 signed in 2015–2021; 952,664 signed in 2026 (incomplete year); 67,103 without signature date |
 | Extraction (Parquet) | pending | pending | pending | |
 | Staging | pending | pending | pending | |
-| Deduplication | pending | pending | pending | |
+| Deduplication | pending | pending | pending (254 expected) | Exact repeats of the same `id_contrato`, measured at the source |
 | Type conversion | pending | pending | pending | |
 | Fact table | pending | pending | pending | |
 
@@ -371,7 +374,7 @@ Rule: no row is discarded without recording the count and the reason.
 | Unnormalized supplier names | Uppercase, accent removal, whitespace collapsing, corporate suffix unification |
 | Heterogeneous NIT formats | Digit extraction, check-digit separation, normalized NIT as natural key |
 | Mixed or null dates | Safe conversion; invalid values counted and mapped to the unknown member |
-| Duplicates from record updates | Keep the most recent version per contract key |
+| Duplicate contract keys (254 `id_contrato` values appear twice at the source) | Keep one row per `id_contrato`: latest `ultima_actualizacion` first, then lowest source row id (`:id`); dropped copies counted |
 | Zero-value or disproportionate contracts | Flagged and quantified, never silently removed |
 
 </details>
@@ -417,10 +420,11 @@ Rule: no row is discarded without recording the count and the reason.
 | 2026-10-23 | Pagination ordered by `:id` with one Parquet file per page | Stable pages and resumable extraction |
 | 2026-11-06 | Repository named `SecopII_project` | Same name for the local folder and the remote repository |
 | 2026-11-06 | Conda environment instead of `venv` | One reproducible environment (`environment.yml`) that pins the Python version independently of the system Python; Python packages still come from `requirements.txt` via pip |
+| 2026-11-07 | Scope: whole country, contracts signed 2022–2025 (3,442,281 rows) instead of Antioquia only | Allows comparing departments and a map of Colombia in the report. The four years are complete; 2026 is still in progress, and the earlier years have few contracts |
 
 **Scaling to 100× the volume:** *pending.*
 
-**Open questions:** final extraction scope.
+**Open questions:** none for the scope.
 
 </details>
 
