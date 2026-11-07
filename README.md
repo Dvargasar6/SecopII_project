@@ -31,6 +31,7 @@ An end-to-end ELT pipeline that extracts Colombian public contracts from the SEC
 - **Extracted scope:** proposed Antioquia, contracts signed 2022–2025; to be confirmed with a SoQL row count.
 - **Last update:** 2026-11-06
 - **Known limitations:** none recorded yet.
+- **Source size (2026-11-06):** dataset `jbjy-vk9h` has 5,687,362 rows and 87 fields (whole country, all years).
 
 </details>
 
